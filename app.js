@@ -1,5 +1,9 @@
 let qrInterval = null;
 
+// Ключи локального хранилища
+const STORAGE_KEY_IMG = "egov_user_doc_img";
+const STORAGE_KEY_DATA = "egov_user_doc_data";
+
 document.addEventListener("DOMContentLoaded", function() {
 
   const tabDoc = document.getElementById("tabDoc");
@@ -7,6 +11,14 @@ document.addEventListener("DOMContentLoaded", function() {
   const documentSection = document.getElementById("documentSection");
   const requisitesSection = document.getElementById("requisitesSection");
   const openBtn = document.getElementById("openAccessBtn");
+  const fileInput = document.getElementById("fileInput");
+  const img = document.getElementById("zoomImage");
+  const editReqModal = document.getElementById("editReqModal");
+  const reqForm = document.getElementById("reqForm");
+  const clearDataBtn = document.getElementById("clearDataBtn");
+
+  // === ИНИЦИАЛИЗАЦИЯ И ВОССТАНОВЛЕНИЕ ДАННЫХ ===
+  loadStoredData();
 
   // === Вкладки ===
   if (tabDoc && tabReq) {
@@ -25,6 +37,56 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  // === ВЫБОР И СОХРАНЕНИЕ ФОТОГРАФИИ ===
+  if (fileInput && img) {
+    fileInput.addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const base64Image = evt.target.result;
+          img.src = base64Image;
+          try {
+            localStorage.setItem(STORAGE_KEY_IMG, base64Image);
+          } catch (err) {
+            // Игнорируем QuotaExceededError если файл слишком большой
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // === РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ РЕКВИЗИТОВ ===
+  if (requisitesSection && editReqModal) {
+    // Нажатие на область реквизитов открывает форму
+    requisitesSection.addEventListener("click", function() {
+      openReqModal();
+    });
+
+    // Закрытие модалки по свайпу или клику вне формы
+    editReqModal.addEventListener("click", function(e) {
+      if (e.target === editReqModal) {
+        editReqModal.classList.add("hidden");
+      }
+    });
+
+    if (reqForm) {
+      reqForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+        saveReqData();
+        editReqModal.classList.add("hidden");
+      });
+    }
+
+    if (clearDataBtn) {
+      clearDataBtn.addEventListener("click", function() {
+        clearAllData();
+        editReqModal.classList.add("hidden");
+      });
+    }
+  }
+
   // === Открытие QR ===
   if (openBtn) {
     openBtn.addEventListener("click", showQR);
@@ -35,43 +97,20 @@ document.addEventListener("DOMContentLoaded", function() {
   const qrSheet = qrModal ? qrModal.querySelector(".qr-sheet") : null;
 
   if (qrModal && qrSheet) {
-    let startY = 0;
-    let currentY = 0;
-    let isDragging = false;
-
-    qrSheet.addEventListener("touchstart", (e) => {
-      startY = e.touches[0].clientY;
-      isDragging = true;
-      qrSheet.style.transition = "none";
-    }, { passive: true });
-
-    qrSheet.addEventListener("touchmove", (e) => {
-      if (!isDragging) return;
-      currentY = e.touches[0].clientY;
-      let diff = currentY - startY;
-      if (diff > 0) {
-        qrSheet.style.transform = `translateY(${diff}px)`;
-      }
-    }, { passive: true });
-
-    qrSheet.addEventListener("touchend", () => {
-      if (!isDragging) return;
-      let diff = currentY - startY;
-      qrSheet.style.transition = "transform 0.25s cubic-bezier(0.1, 0.8, 0.1, 1)";
-      if (diff > 100) {
-        closeQR();
-      } else {
-        qrSheet.style.transform = "translateY(0)";
-      }
-      isDragging = false;
-    });
+    setupSheetSwipe(qrModal, qrSheet, closeQR);
+  }
+  
+  if (editReqModal) {
+    const editSheet = editReqModal.querySelector(".qr-sheet");
+    if (editSheet) {
+      setupSheetSwipe(editReqModal, editSheet, () => editReqModal.classList.add("hidden"));
+    }
   }
 
   // ==========================================
   // === PINCH & PAN ZOOM ДЛЯ КАРТОЧКИ ===
   // ==========================================
 
-  const img = document.getElementById("zoomImage");
   const container = document.getElementById("zoomContainer");
 
   if (img && container) {
@@ -83,6 +122,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let startX = 0;
     let startY = 0;
     let lastTap = 0;
+    let isMoved = false;
 
     function getDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -92,7 +132,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function updateTransform() {
       if (scale > 1) {
-        img.style.borderRadius = "0px"; // При увеличении закругление уходит за границы
+        img.style.borderRadius = "0px";
       } else {
         img.style.borderRadius = "16px";
       }
@@ -117,8 +157,8 @@ document.addEventListener("DOMContentLoaded", function() {
       translateY = Math.max(-maxY, Math.min(maxY, translateY));
     }
 
-    // Двойной таб
     img.addEventListener("touchstart", (e) => {
+      isMoved = false;
       const now = Date.now();
       if (e.touches.length === 1 && now - lastTap < 300) {
         if (scale > 1) {
@@ -144,6 +184,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }, { passive: true });
 
     img.addEventListener("touchmove", (e) => {
+      isMoved = true;
       if (e.touches.length === 2) {
         e.preventDefault();
         const newDistance = getDistance(e.touches);
@@ -160,7 +201,12 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     }, { passive: false });
 
-    img.addEventListener("touchend", () => {
+    img.addEventListener("touchend", (e) => {
+      // Одиночный обычный тап по фото вызовет замену изображения
+      if (!isMoved && scale === 1 && e.changedTouches.length === 1) {
+        if (fileInput) fileInput.click();
+      }
+
       if (scale < 1) {
         scale = 1;
         translateX = 0;
@@ -173,9 +219,116 @@ document.addEventListener("DOMContentLoaded", function() {
         updateTransform();
       }
     });
+
+    // Для десктопного / мышиного клика
+    img.addEventListener("click", () => {
+      if (scale === 1 && fileInput) {
+        fileInput.click();
+      }
+    });
   }
 
 });
+
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ХРАНИЛИЩА ===
+
+function loadStoredData() {
+  const storedImg = localStorage.getItem(STORAGE_KEY_IMG);
+  if (storedImg) {
+    const img = document.getElementById("zoomImage");
+    if (img) img.src = storedImg;
+  }
+
+  const rawData = localStorage.getItem(STORAGE_KEY_DATA);
+  if (rawData) {
+    try {
+      const data = JSON.parse(rawData);
+      applyDataToUI(data);
+    } catch(e) {}
+  }
+}
+
+function applyDataToUI(data) {
+  const fields = ['fullname', 'iin', 'dob', 'docnum', 'issuedate', 'expdate', 'issuer', 'nationality'];
+  fields.forEach(f => {
+    const el = document.getElementById(`val-${f}`);
+    if (el) el.innerText = data[f] && data[f].trim() !== '' ? data[f] : '—';
+  });
+}
+
+function openReqModal() {
+  const modal = document.getElementById("editReqModal");
+  if (!modal) return;
+  
+  const rawData = localStorage.getItem(STORAGE_KEY_DATA);
+  const data = rawData ? JSON.parse(rawData) : {};
+
+  const fields = ['fullname', 'iin', 'dob', 'docnum', 'issuedate', 'expdate', 'issuer', 'nationality'];
+  fields.forEach(f => {
+    const input = document.getElementById(`in-${f}`);
+    if (input) input.value = data[f] || '';
+  });
+
+  modal.classList.remove("hidden");
+}
+
+function saveReqData() {
+  const fields = ['fullname', 'iin', 'dob', 'docnum', 'issuedate', 'expdate', 'issuer', 'nationality'];
+  const data = {};
+  
+  fields.forEach(f => {
+    const input = document.getElementById(`in-${f}`);
+    if (input) data[f] = input.value;
+  });
+
+  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
+  applyDataToUI(data);
+}
+
+function clearAllData() {
+  localStorage.removeItem(STORAGE_KEY_IMG);
+  localStorage.removeItem(STORAGE_KEY_DATA);
+
+  const img = document.getElementById("zoomImage");
+  if (img) {
+    img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='190' viewBox='0 0 300 190'><rect width='100%' height='100%' fill='%23f2f2f7'/><text x='50%' y='50%' font-family='sans-serif' font-size='14' fill='%238e8e93' text-anchor='middle' dy='.3em'>Нажмите для выбора фото</text></svg>";
+  }
+
+  applyDataToUI({});
+}
+
+function setupSheetSwipe(modal, sheet, closeFn) {
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+
+  sheet.addEventListener("touchstart", (e) => {
+    startY = e.touches[0].clientY;
+    isDragging = true;
+    sheet.style.transition = "none";
+  }, { passive: true });
+
+  sheet.addEventListener("touchmove", (e) => {
+    if (!isDragging) return;
+    currentY = e.touches[0].clientY;
+    let diff = currentY - startY;
+    if (diff > 0) {
+      sheet.style.transform = `translateY(${diff}px)`;
+    }
+  }, { passive: true });
+
+  sheet.addEventListener("touchend", () => {
+    if (!isDragging) return;
+    let diff = currentY - startY;
+    sheet.style.transition = "transform 0.25s cubic-bezier(0.1, 0.8, 0.1, 1)";
+    if (diff > 100) {
+      closeFn();
+    } else {
+      sheet.style.transform = "translateY(0)";
+    }
+    isDragging = false;
+  });
+}
 
 // === QR Функции ===
 function showQR() {
