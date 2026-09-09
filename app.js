@@ -1,6 +1,5 @@
 let qrInterval = null;
 
-// Ключи локального хранилища
 const STORAGE_KEY_IMG = "egov_user_doc_img";
 const STORAGE_KEY_DATA = "egov_user_doc_data";
 
@@ -17,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const reqForm = document.getElementById("reqForm");
   const clearDataBtn = document.getElementById("clearDataBtn");
 
-  // === ИНИЦИАЛИЗАЦИЯ И ВОССТАНОВЛЕНИЕ ДАННЫХ ===
+  // Загружаем ранее сохраненные данные
   loadStoredData();
 
   // === Вкладки ===
@@ -37,19 +36,21 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // === ВЫБОР И СОХРАНЕНИЕ ФОТОГРАФИИ ===
-  if (fileInput && img) {
+  // === ВЫБОР И ЧТЕНИЕ ФОТОГРАФИИ ===
+  if (fileInput) {
     fileInput.addEventListener("change", function(e) {
-      const file = e.target.files[0];
+      const file = e.target.files && e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = function(evt) {
           const base64Image = evt.target.result;
-          img.src = base64Image;
+          if (img) {
+            img.src = base64Image;
+          }
           try {
             localStorage.setItem(STORAGE_KEY_IMG, base64Image);
           } catch (err) {
-            // Игнорируем QuotaExceededError если файл слишком большой
+            // Если localStorage переполнен большим файлом
           }
         };
         reader.readAsDataURL(file);
@@ -59,12 +60,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // === РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ РЕКВИЗИТОВ ===
   if (requisitesSection && editReqModal) {
-    // Нажатие на область реквизитов открывает форму
     requisitesSection.addEventListener("click", function() {
       openReqModal();
     });
 
-    // Закрытие модалки по свайпу или клику вне формы
     editReqModal.addEventListener("click", function(e) {
       if (e.target === editReqModal) {
         editReqModal.classList.add("hidden");
@@ -122,7 +121,6 @@ document.addEventListener("DOMContentLoaded", function() {
     let startX = 0;
     let startY = 0;
     let lastTap = 0;
-    let isMoved = false;
 
     function getDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -157,8 +155,8 @@ document.addEventListener("DOMContentLoaded", function() {
       translateY = Math.max(-maxY, Math.min(maxY, translateY));
     }
 
+    // Двойной тап для приближения
     img.addEventListener("touchstart", (e) => {
-      isMoved = false;
       const now = Date.now();
       if (e.touches.length === 1 && now - lastTap < 300) {
         if (scale > 1) {
@@ -184,7 +182,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }, { passive: true });
 
     img.addEventListener("touchmove", (e) => {
-      isMoved = true;
       if (e.touches.length === 2) {
         e.preventDefault();
         const newDistance = getDistance(e.touches);
@@ -201,12 +198,7 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     }, { passive: false });
 
-    img.addEventListener("touchend", (e) => {
-      // Одиночный обычный тап по фото вызовет замену изображения
-      if (!isMoved && scale === 1 && e.changedTouches.length === 1) {
-        if (fileInput) fileInput.click();
-      }
-
+    img.addEventListener("touchend", () => {
       if (scale < 1) {
         scale = 1;
         translateX = 0;
@@ -217,13 +209,6 @@ document.addEventListener("DOMContentLoaded", function() {
       } else {
         limitBounds();
         updateTransform();
-      }
-    });
-
-    // Для десктопного / мышиного клика
-    img.addEventListener("click", () => {
-      if (scale === 1 && fileInput) {
-        fileInput.click();
       }
     });
   }
