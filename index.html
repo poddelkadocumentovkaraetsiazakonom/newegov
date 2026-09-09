@@ -1,130 +1,182 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="app-icon.png">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="eGov Mobile">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#ffffff">
   <link rel="stylesheet" href="style.css">
   <title>eGov Mobile</title>
 </head>
 <body>
 
   <div class="home-container">
+    
     <!-- Поисковая строка -->
     <div class="search-bar">
       <div class="search-input">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2.5">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <span>Поиск по eGov</span>
+        <span>Быстрый поиск</span>
       </div>
-      <div class="ai-badge">eGov AI</div>
+      <div class="ai-badge">AI</div>
     </div>
 
-    <!-- Верхние баннеры -->
+    <!-- Баннеры -->
     <div class="top-banners-scroll">
       <div class="banner banner-gpt">
         <div>
-          <div class="banner-sub">eGov AI</div>
-          <div class="banner-title">Задайте вопрос ChatGPT</div>
-          <div class="banner-desc">Ответит на любой вопрос по госуслугам</div>
+          <div class="banner-sub">egov.gpt</div>
+          <div class="banner-title">Получай услуги<br>с помощью EgovGPT</div>
+          <div class="banner-desc">Твой личный ИИ-ассистент<br>по госуслугам</div>
         </div>
         <div class="banner-ai-tag">AI</div>
       </div>
+
       <div class="banner banner-gas">
         <div>
-          <div class="banner-sub">Услуги</div>
-          <div class="banner-title">Подача заявки на газ</div>
-          <div class="banner-desc">Быстрое подключение онлайн</div>
+          <div class="banner-title">Передача<br>показаний газа</div>
+          <div class="banner-desc">АО «QazaqGaz Aimaq»</div>
         </div>
-        <div class="banner-arrow">→</div>
+        <div class="banner-arrow">›</div>
       </div>
     </div>
 
-    <!-- Раздел «Цифровые документы» -->
+    <!-- Цифровые документы -->
     <div class="docs-section">
       <div class="docs-row">
+        <!-- Левая колонка -->
         <div class="docs-left-col">
-          <h2 class="section-title">Цифровые<br>документы</h2>
-          <a href="#" class="all-docs-btn">Все (1)</a>
+          <div class="section-title">Цифровые<br>документы</div>
+          <a href="#" class="all-docs-btn">Все ›</a>
         </div>
 
-        <!-- Карточка Удостоверения личности -->
+        <!-- Карточка документа -->
         <a href="document.html" class="doc-card-link">
           <div class="doc-card-top">
-            <img src="id-card.png" class="doc-cover-img" alt="Удостоверение" onerror="this.src='my-id.jpg'">
+            <img src="id-card.png" class="doc-cover-img" alt="Удостоверение личности">
           </div>
-          <div class="doc-title">Удостоверение личности</div>
+          <div class="doc-title">Удостоверение<br>личности</div>
         </a>
       </div>
     </div>
 
-    <!-- Раздел «Сервисы» -->
-    <h2 class="section-header margin-top">Сервисы</h2>
+    <!-- РАЗДЕЛ «СЕРВИСЫ» (Единая сетка без дублей) -->
     <div class="services-grid">
       <div class="service-card">
-        <div class="s-icon"><img src="icons/egov-main.png" class="service-img" alt="eGov" onerror="this.style.display='none'"></div>
+        <div class="s-icon">
+          <img src="icons/egov-main.png" alt="eGov Госуслуги" class="service-img">
+        </div>
       </div>
+
       <div class="service-card">
-        <div class="s-icon"><img src="icons/e-otinish.png" class="service-img" alt="e-Otinish" onerror="this.style.display='none'"></div>
+        <div class="s-icon">
+          <img src="icons/e-otinish.png" alt="eOtinish" class="service-img">
+        </div>
       </div>
+
       <div class="service-card">
-        <div class="s-icon"><img src="icons/zakon.png" class="service-img" alt="Законодательство" onerror="this.style.display='none'"></div>
+        <div class="s-icon">
+          <img src="icons/zakon.png" alt="Закон и порядок" class="service-img">
+        </div>
       </div>
+
       <div class="service-card">
-        <div class="s-icon"><img src="icons/taza-qazaqstan.png" class="service-img" alt="Таза Қазақстан" onerror="this.style.display='none'"></div>
+        <div class="s-icon">
+          <img src="icons/taza-qazaqstan.png" alt="Taza Qazaqstan" class="service-img">
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="s-icon">
+          <img src="icons/social-wallet.png" alt="Социальный кошелек" class="service-img">
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="s-icon">
+          <img src="icons/enotary.png" alt="eNotary" class="service-img">
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="s-icon">
+          <img src="icons/oqu.png" alt="Образование" class="service-img">
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="s-icon">
+          <img src="icons/enbek.png" alt="Enbek.kz" class="service-img">
+        </div>
       </div>
     </div>
 
-    <!-- Баннер Налогового Кодекса -->
+    <!-- БАННЕР НАЛОГОВОГО КОДЕКСА -->
     <div class="tax-banner">
       <div class="tax-content">
-        <span class="tax-tag">Налоговый кодекс</span>
-        <div class="tax-title">Ознакомьтесь с новыми правилами</div>
+        <div class="tax-tag">Часто задаваемые вопросы</div>
+        <div class="tax-title">Вопросы и ответы<br>по Налоговому кодексу</div>
       </div>
       <div class="tax-badge">
-        <img src="tax-badge.png" class="tax-badge-img" alt="КГД">
+        <img src="tax-badge.png" alt="Герб / Эмблема" class="tax-badge-img">
       </div>
       <div class="tax-arrow">›</div>
       <div class="tax-dots-capsule">
-        <div class="tdot active"></div>
-        <div class="tdot"></div>
-        <div class="tdot"></div>
+        <span class="tdot active"></span>
+        <span class="tdot"></span>
+        <span class="tdot"></span>
+        <span class="tdot"></span>
+        <span class="tdot"></span>
+        <span class="tdot"></span>
+        <span class="tdot"></span>
       </div>
     </div>
+
+    <div class="section-header margin-top">Популярные услуги</div>
+
   </div>
 
-  <!-- Нижний Tab Bar -->
+  <!-- Нижняя панель навигации (Tab Bar iOS) -->
   <div class="bottom-nav">
     <div class="nav-item active">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
       </svg>
       <span>Главная</span>
     </div>
     <div class="nav-item">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" rx="2"></rect>
-        <rect x="14" y="3" width="7" height="7" rx="2"></rect>
-        <rect x="14" y="14" width="7" height="7" rx="2"></rect>
-        <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span>egov QR</span>
+    </div>
+    <div class="nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
       <span>Сервисы</span>
     </div>
     <div class="nav-item">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
-
-      <span>Уведомления</span>
+      <span>Сообщения</span>
     </div>
     <div class="nav-item">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
+        <circle cx="12" cy="7" r="4"/>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
       </svg>
       <span>Профиль</span>
     </div>
