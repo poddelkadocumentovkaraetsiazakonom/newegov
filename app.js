@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const openBtn = document.getElementById("openAccessBtn");
   const fileInput = document.getElementById("fileInput");
   const img = document.getElementById("zoomImage");
+  const container = document.getElementById("zoomContainer");
   const editReqModal = document.getElementById("editReqModal");
   const reqForm = document.getElementById("reqForm");
   const clearDataBtn = document.getElementById("clearDataBtn");
@@ -36,8 +37,21 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // === Загрузка изображения ===
+  // === Загрузка изображения & Клик на фото ===
   if (fileInput) {
+    // Вызов диалога выбора файла при клике на контейнер или изображение
+    const triggerFileInput = function(e) {
+      if (e.target !== fileInput) {
+        fileInput.click();
+      }
+    };
+
+    if (container) {
+      container.addEventListener("click", triggerFileInput);
+    } else if (img) {
+      img.addEventListener("click", triggerFileInput);
+    }
+
     fileInput.addEventListener("change", function(e) {
       const file = e.target.files && e.target.files[0];
       if (file) {
@@ -103,8 +117,6 @@ document.addEventListener("DOMContentLoaded", function() {
   // === ПЛАВНЫЙ GPU ПИНЧ-ЗУМ И ПАНОРАМИРОВАНИЕ ===
   // ==========================================
 
-  const container = document.getElementById("zoomContainer");
-
   if (img && container) {
     let scale = 1;
     let lastScale = 1;
@@ -115,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let startY = 0;
     let lastTap = 0;
     let isPinching = false;
+    let touchMoved = false;
 
     function getDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -159,6 +172,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     container.addEventListener("touchstart", (e) => {
       const now = Date.now();
+      touchMoved = false;
 
       // Двойной тап для быстрого масштабирования
       if (e.touches.length === 1 && now - lastTap < 280) {
@@ -186,8 +200,9 @@ document.addEventListener("DOMContentLoaded", function() {
     }, { passive: true });
 
     container.addEventListener("touchmove", (e) => {
+      touchMoved = true;
       if (e.touches.length === 2 && isPinching) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         const dist = getDistance(e.touches);
         if (startDistance > 0) {
           scale = lastScale * (dist / startDistance);
@@ -196,7 +211,7 @@ document.addEventListener("DOMContentLoaded", function() {
           requestAnimationFrame(() => updateTransform(false));
         }
       } else if (e.touches.length === 1 && scale > 1.05 && !isPinching) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         translateX = e.touches[0].clientX - startX;
         translateY = e.touches[0].clientY - startY;
         limitBounds();
@@ -207,6 +222,12 @@ document.addEventListener("DOMContentLoaded", function() {
     container.addEventListener("touchend", (e) => {
       if (e.touches.length < 2) {
         isPinching = false;
+      }
+
+      // Если был простой одиночный тап в несжатом состоянии — открываем галерею
+      if (!touchMoved && scale <= 1.05 && e.changedTouches.length === 1 && fileInput) {
+        fileInput.click();
+        return;
       }
 
       if (scale < 1) {
@@ -344,11 +365,13 @@ function showQR() {
   const qrContainer = document.getElementById("qrcode");
   if (qrContainer) {
     qrContainer.innerHTML = "";
-    new QRCode(qrContainer, {
-      text: randomCode.toString(),
-      width: 200,
-      height: 200
-    });
+    if (typeof QRCode !== "undefined") {
+      new QRCode(qrContainer, {
+        text: randomCode.toString(),
+        width: 200,
+        height: 200
+      });
+    }
   }
 
   let time = 60;
