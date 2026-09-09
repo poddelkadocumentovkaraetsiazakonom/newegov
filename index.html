@@ -6,133 +6,127 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="app-icon.png">
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-  <title>Удостоверение личности</title>
+  <title>eGov Mobile</title>
 </head>
-<body class="doc-body">
+<body>
 
-  <!-- Фиксированная верхняя панель -->
-  <div class="top-bar">
-    <div class="header-nav">
-      <a href="index.html" class="icon-btn" aria-label="Закрыть">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
+  <div class="home-container">
+    <!-- Поисковая строка -->
+    <div class="search-bar">
+      <div class="search-input">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-      </a>
-      <h1 class="title">Удостоверение личности</h1>
-      <button class="icon-btn" aria-label="Поделиться">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-          <polyline points="16 6 12 2 8 6"></polyline>
-          <line x1="12" y1="2" x2="12" y2="15"></line>
-        </svg>
-      </button>
+        <span>Поиск по eGov</span>
+      </div>
+      <div class="ai-badge">eGov AI</div>
     </div>
 
-    <!-- Переключатель Вкладок -->
-    <div class="tabs">
-      <div class="tab active" id="tabDoc">Документ</div>
-      <div class="tab" id="tabReq">Реквизиты</div>
-    </div>
-  </div>
-
-  <!-- Рабочая область просмотра документа -->
-  <div class="content-viewport">
-    <div id="documentSection" class="doc-section">
-      <div class="zoom-container" id="zoomContainer">
-        <!-- Скрытый инпут и лейбл для надёжного вызова галереи iOS без дублирования событий -->
-        <input type="file" id="fileInput" accept="image/*" style="display: none;">
-        <label for="fileInput" id="zoomImageLabel" style="display: block; width: 100%; text-align: center; cursor: pointer;">
-          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='190' viewBox='0 0 300 190'><rect width='100%' height='100%' fill='%23f2f2f7'/><text x='50%' y='50%' font-family='sans-serif' font-size='14' fill='%238e8e93' text-anchor='middle' dy='.3em'>Нажмите для выбора фото</text></svg>" id="zoomImage" class="document-card" alt="Удостоверение">
-        </label>
-      </div>
-    </div>
-
-    <!-- Секция реквизитов -->
-    <div id="requisitesSection" class="requisites-section hidden">
-      <div class="info-item">
-        <div class="label">ФИО</div>
-        <div class="value" id="val-fullname">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">ИИН</div>
-        <div class="value" id="val-iin">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Дата рождения</div>
-        <div class="value" id="val-dob">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Номер документа</div>
-        <div class="value" id="val-docnum">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Дата выдачи</div>
-        <div class="value" id="val-issuedate">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Срок действия</div>
-        <div class="value" id="val-expdate">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Орган выдачи</div>
-        <div class="value" id="val-issuer">—</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Национальность</div>
-        <div class="value" id="val-nationality">—</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Фиксированная нижняя панель -->
-  <div class="bottom-bar">
-    <div class="action-btn-group">
-      <button class="primary-btn" id="openAccessBtn">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <rect x="3" y="3" width="18" height="18" rx="4"></rect>
-          <path d="M7 7h3v3H7zM14 7h3v3h-3zM7 14h3v3H7zM14 14h3v3H7z"></path>
-        </svg>
-        <span>Открыть доступ</span>
-      </button>
-      <button class="more-btn" aria-label="Опции">
-        <span>•••</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Модальное окно редактирования реквизитов -->
-  <div id="editReqModal" class="qr-modal hidden">
-    <div class="qr-sheet edit-sheet">
-      <div class="drag-handle"></div>
-      <h3 style="margin-bottom: 12px; font-size: 17px;">Реквизиты документа</h3>
-      <form id="reqForm" class="edit-form">
-        <input type="text" id="in-fullname" placeholder="ФИО">
-        <input type="text" id="in-iin" placeholder="ИИН">
-        <input type="text" id="in-dob" placeholder="Дата рождения">
-        <input type="text" id="in-docnum" placeholder="Номер документа">
-        <input type="text" id="in-issuedate" placeholder="Дата выдачи">
-        <input type="text" id="in-expdate" placeholder="Срок действия">
-        <input type="text" id="in-issuer" placeholder="Орган выдачи">
-        <input type="text" id="in-nationality" placeholder="Национальность">
-        
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
-          <button type="button" id="clearDataBtn" class="clear-btn">Удалить все данные</button>
-          <button type="submit" class="primary-btn" style="height: 44px; flex: 1;">Сохранить</button>
+    <!-- Верхние баннеры -->
+    <div class="top-banners-scroll">
+      <div class="banner banner-gpt">
+        <div>
+          <div class="banner-sub">eGov AI</div>
+          <div class="banner-title">Задайте вопрос ChatGPT</div>
+          <div class="banner-desc">Ответит на любой вопрос по госуслугам</div>
         </div>
-      </form>
+        <div class="banner-ai-tag">AI</div>
+      </div>
+      <div class="banner banner-gas">
+        <div>
+          <div class="banner-sub">Услуги</div>
+          <div class="banner-title">Подача заявки на газ</div>
+          <div class="banner-desc">Быстрое подключение онлайн</div>
+        </div>
+        <div class="banner-arrow">→</div>
+      </div>
+    </div>
+
+    <!-- Раздел «Цифровые документы» -->
+    <div class="docs-section">
+      <div class="docs-row">
+        <div class="docs-left-col">
+          <h2 class="section-title">Цифровые<br>документы</h2>
+          <a href="#" class="all-docs-btn">Все (1)</a>
+        </div>
+
+        <!-- Карточка Удостоверения личности -->
+        <a href="document.html" class="doc-card-link">
+          <div class="doc-card-top">
+            <img src="id-card.png" class="doc-cover-img" alt="Удостоверение" onerror="this.src='my-id.jpg'">
+          </div>
+          <div class="doc-title">Удостоверение личности</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Раздел «Сервисы» -->
+    <h2 class="section-header margin-top">Сервисы</h2>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="s-icon"><img src="icons/egov-main.png" class="service-img" alt="eGov" onerror="this.style.display='none'"></div>
+      </div>
+      <div class="service-card">
+        <div class="s-icon"><img src="icons/e-otinish.png" class="service-img" alt="e-Otinish" onerror="this.style.display='none'"></div>
+      </div>
+      <div class="service-card">
+        <div class="s-icon"><img src="icons/zakon.png" class="service-img" alt="Законодательство" onerror="this.style.display='none'"></div>
+      </div>
+      <div class="service-card">
+        <div class="s-icon"><img src="icons/taza-qazaqstan.png" class="service-img" alt="Таза Қазақстан" onerror="this.style.display='none'"></div>
+      </div>
+    </div>
+
+    <!-- Баннер Налогового Кодекса -->
+    <div class="tax-banner">
+      <div class="tax-content">
+        <span class="tax-tag">Налоговый кодекс</span>
+        <div class="tax-title">Ознакомьтесь с новыми правилами</div>
+      </div>
+      <div class="tax-badge">
+        <img src="tax-badge.png" class="tax-badge-img" alt="КГД">
+      </div>
+      <div class="tax-arrow">›</div>
+      <div class="tax-dots-capsule">
+        <div class="tdot active"></div>
+        <div class="tdot"></div>
+        <div class="tdot"></div>
+      </div>
     </div>
   </div>
 
-  <!-- QR Модалка -->
-  <div id="qrModal" class="qr-modal hidden">
-    <div class="qr-sheet">
-      <div class="drag-handle"></div>
-      <h2>Доступ к документу</h2>
-      <div id="qrcode"></div>
-      <div id="timer" class="timer"></div>
-      <div id="shortCode" class="short-code"></div>
+  <!-- Нижний Tab Bar -->
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+      <span>Главная</span>
+    </div>
+    <div class="nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+      </svg>
+      <span>Сервисы</span>
+    </div>
+    <div class="nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+      </svg>
+
+      <span>Уведомления</span>
+    </div>
+    <div class="nav-item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Профиль</span>
     </div>
   </div>
 
