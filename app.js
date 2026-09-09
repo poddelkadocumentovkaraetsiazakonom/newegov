@@ -16,10 +16,10 @@ document.addEventListener("DOMContentLoaded", function() {
   const reqForm = document.getElementById("reqForm");
   const clearDataBtn = document.getElementById("clearDataBtn");
 
-  // Загружаем ранее сохраненные данные
+  // Загрузка сохраненных данных
   loadStoredData();
 
-  // === Вкладки ===
+  // === Переключение вкладок ===
   if (tabDoc && tabReq) {
     tabDoc.addEventListener("click", function() {
       documentSection.classList.remove("hidden");
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // === ВЫБОР И ЧТЕНИЕ ФОТОГРАФИИ ===
+  // === Загрузка изображения ===
   if (fileInput) {
     fileInput.addEventListener("change", function(e) {
       const file = e.target.files && e.target.files[0];
@@ -44,25 +44,19 @@ document.addEventListener("DOMContentLoaded", function() {
         const reader = new FileReader();
         reader.onload = function(evt) {
           const base64Image = evt.target.result;
-          if (img) {
-            img.src = base64Image;
-          }
+          if (img) img.src = base64Image;
           try {
             localStorage.setItem(STORAGE_KEY_IMG, base64Image);
-          } catch (err) {
-            // Если localStorage переполнен большим файлом
-          }
+          } catch (err) {}
         };
         reader.readAsDataURL(file);
       }
     });
   }
 
-  // === РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ РЕКВИЗИТОВ ===
+  // === Модальное окно реквизитов ===
   if (requisitesSection && editReqModal) {
-    requisitesSection.addEventListener("click", function() {
-      openReqModal();
-    });
+    requisitesSection.addEventListener("click", openReqModal);
 
     editReqModal.addEventListener("click", function(e) {
       if (e.target === editReqModal) {
@@ -86,12 +80,11 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // === Открытие QR ===
+  // === QR Модалка ===
   if (openBtn) {
     openBtn.addEventListener("click", showQR);
   }
 
-  // === Свайп вниз для закрытия шторки ===
   const qrModal = document.getElementById("qrModal");
   const qrSheet = qrModal ? qrModal.querySelector(".qr-sheet") : null;
 
@@ -107,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // ==========================================
-  // === PINCH & PAN ZOOM ДЛЯ КАРТОЧКИ ===
+  // === ПЛАВНЫЙ GPU ПИНЧ-ЗУМ И ПАНОРАМИРОВАНИЕ ===
   // ==========================================
 
   const container = document.getElementById("zoomContainer");
@@ -121,6 +114,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let startX = 0;
     let startY = 0;
     let lastTap = 0;
+    let isPinching = false;
 
     function getDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
@@ -128,13 +122,21 @@ document.addEventListener("DOMContentLoaded", function() {
       return Math.sqrt(dx * dx + dy * dy);
     }
 
-    function updateTransform() {
-      if (scale > 1) {
+    function updateTransform(animated = false) {
+      if (animated) {
+        img.style.transition = "transform 0.25s cubic-bezier(0.1, 0.8, 0.1, 1)";
+      } else {
+        img.style.transition = "none";
+      }
+      
+      // Аппаратно-ускоренная трансформация
+      img.style.transform = `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
+      
+      if (scale > 1.05) {
         img.style.borderRadius = "0px";
       } else {
         img.style.borderRadius = "16px";
       }
-      img.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`;
     }
 
     function limitBounds() {
@@ -145,34 +147,36 @@ document.addEventListener("DOMContentLoaded", function() {
       }
 
       const rect = container.getBoundingClientRect();
-      const imgWidth = rect.width * scale;
-      const imgHeight = (img.offsetHeight || 250) * scale;
+      const imgW = rect.width * scale;
+      const imgH = (img.offsetHeight || 220) * scale;
 
-      const maxX = Math.max(0, (imgWidth - rect.width) / 2);
-      const maxY = Math.max(0, (imgHeight - rect.height) / 2);
+      const maxX = Math.max(0, (imgW - rect.width) / 2);
+      const maxY = Math.max(0, (imgH - rect.height) / 2);
 
       translateX = Math.max(-maxX, Math.min(maxX, translateX));
       translateY = Math.max(-maxY, Math.min(maxY, translateY));
     }
 
-    // Двойной тап для приближения
-    img.addEventListener("touchstart", (e) => {
+    container.addEventListener("touchstart", (e) => {
       const now = Date.now();
-      if (e.touches.length === 1 && now - lastTap < 300) {
-        if (scale > 1) {
+
+      // Двойной тап для быстрого масштабирования
+      if (e.touches.length === 1 && now - lastTap < 280) {
+        if (scale > 1.1) {
           scale = 1;
           translateX = 0;
           translateY = 0;
         } else {
-          scale = 2.4;
+          scale = 2.5;
         }
-        img.style.transition = "transform 0.25s ease-out, border-radius 0.25s ease-out";
-        updateTransform();
-        setTimeout(() => { img.style.transition = "none"; }, 250);
+        updateTransform(true);
+        lastTap = 0;
+        return;
       }
       lastTap = now;
 
       if (e.touches.length === 2) {
+        isPinching = true;
         startDistance = getDistance(e.touches);
         lastScale = scale;
       } else if (e.touches.length === 1 && scale > 1) {
@@ -181,34 +185,42 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     }, { passive: true });
 
-    img.addEventListener("touchmove", (e) => {
-      if (e.touches.length === 2) {
+    container.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2 && isPinching) {
         e.preventDefault();
-        const newDistance = getDistance(e.touches);
-        scale = lastScale * (newDistance / startDistance);
-        scale = Math.max(1, Math.min(scale, 4));
-        limitBounds();
-        updateTransform();
-      } else if (e.touches.length === 1 && scale > 1) {
+        const dist = getDistance(e.touches);
+        if (startDistance > 0) {
+          scale = lastScale * (dist / startDistance);
+          scale = Math.max(0.9, Math.min(scale, 4.5));
+          limitBounds();
+          requestAnimationFrame(() => updateTransform(false));
+        }
+      } else if (e.touches.length === 1 && scale > 1.05 && !isPinching) {
         e.preventDefault();
         translateX = e.touches[0].clientX - startX;
         translateY = e.touches[0].clientY - startY;
         limitBounds();
-        updateTransform();
+        requestAnimationFrame(() => updateTransform(false));
       }
     }, { passive: false });
 
-    img.addEventListener("touchend", () => {
+    container.addEventListener("touchend", (e) => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+      }
+
       if (scale < 1) {
         scale = 1;
         translateX = 0;
         translateY = 0;
-        img.style.transition = "transform 0.2s ease, border-radius 0.2s ease";
-        updateTransform();
-        setTimeout(() => { img.style.transition = "none"; }, 200);
+        updateTransform(true);
+      } else if (scale > 4) {
+        scale = 4;
+        limitBounds();
+        updateTransform(true);
       } else {
         limitBounds();
-        updateTransform();
+        updateTransform(true);
       }
     });
   }
