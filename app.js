@@ -1,7 +1,90 @@
 let qrInterval = null;
 
-const STORAGE_KEY_IMG = "egov_user_doc_img";
 const STORAGE_KEY_DATA = "egov_user_doc_data";
+const DB_NAME = "eGovDocDB";
+const STORE_NAME = "images";
+const DB_KEY = "doc_image";
+
+// === Простая асинхронная работа с IndexedDB ===
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function saveImageToDB(base64Data) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(base64Data, DB_KEY);
+    return tx.complete;
+  } catch (err) {
+    console.error("Error saving image to IndexedDB:", err);
+  }
+}
+
+async function loadImageFromDB() {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const req = tx.objectStore(STORE_NAME).get(DB_KEY);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch (err) {
+    return null;
+  }
+}
+
+async function removeImageFromDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(DB_KEY);
+  } catch (err) {}
+}
+
+// Оптимизация тяжелых фото с камеры iPhone перед сохранением
+function compressImage(file, maxSide = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxSide || h > maxSide) {
+          if (w > h) {
+            h = Math.round((h * maxSide) / w);
+            w = maxSide;
+          } else {
+            w = Math.round((w * maxSide) / h);
+            h = maxSide;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 document.addEventListener("DOMContentLoaded", function() {
 
@@ -37,33 +120,18 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // === Загрузка изображения & Клик на фото ===
+  // === Загрузка изображения ===
   if (fileInput) {
-    // Вызов диалога выбора файла при клике на контейнер или изображение
-    const triggerFileInput = function(e) {
-      if (e.target !== fileInput) {
-        fileInput.click();
-      }
-    };
-
-    if (container) {
-      container.addEventListener("click", triggerFileInput);
-    } else if (img) {
-      img.addEventListener("click", triggerFileInput);
-    }
-
-    fileInput.addEventListener("change", function(e) {
+    fileInput.addEventListener("change", async function(e) {
       const file = e.target.files && e.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          const base64Image = evt.target.result;
-          if (img) img.src = base64Image;
-          try {
-            localStorage.setItem(STORAGE_KEY_IMG, base64Image);
-          } catch (err) {}
-        };
-        reader.readAsDataURL(file);
+        try {
+          const optimizedBase64 = await compressImage(file);
+          if (img) img.src = optimizedBase64;
+          await saveImageToDB(optimizedBase64);
+        } catch (err) {
+          console.error("Failed to process image:", err);
+        }
       }
     });
   }
@@ -114,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // ==========================================
-  // === ПЛАВНЫЙ GPU ПИНЧ-ЗУМ И ПАНОРАМИРОВАНИЕ ===
+  // === ОПТИМИЗИРОВАННЫЙ GPU ПИНЧ-ЗУМ ===
   // ==========================================
 
   if (img && container) {
@@ -128,21 +196,21 @@ document.addEventListener("DOMContentLoaded", function() {
     let lastTap = 0;
     let isPinching = false;
     let touchMoved = false;
+    let rafId = null;
 
     function getDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
       const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
+      return Math.hypot(dx, dy);
     }
 
-    function updateTransform(animated = false) {
+    function renderTransform(animated = false) {
       if (animated) {
         img.style.transition = "transform 0.25s cubic-bezier(0.1, 0.8, 0.1, 1)";
       } else {
         img.style.transition = "none";
       }
       
-      // Аппаратно-ускоренная трансформация
       img.style.transform = `translate3d(${translateX.toFixed(2)}px, ${translateY.toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
       
       if (scale > 1.05) {
@@ -150,6 +218,11 @@ document.addEventListener("DOMContentLoaded", function() {
       } else {
         img.style.borderRadius = "16px";
       }
+    }
+
+    function requestRender(animated = false) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => renderTransform(animated));
     }
 
     function limitBounds() {
@@ -174,7 +247,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const now = Date.now();
       touchMoved = false;
 
-      // Двойной тап для быстрого масштабирования
+      // Двойной тап для быстрого зума
       if (e.touches.length === 1 && now - lastTap < 280) {
         if (scale > 1.1) {
           scale = 1;
@@ -183,7 +256,7 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
           scale = 2.5;
         }
-        updateTransform(true);
+        requestRender(true);
         lastTap = 0;
         return;
       }
@@ -208,14 +281,14 @@ document.addEventListener("DOMContentLoaded", function() {
           scale = lastScale * (dist / startDistance);
           scale = Math.max(0.9, Math.min(scale, 4.5));
           limitBounds();
-          requestAnimationFrame(() => updateTransform(false));
+          requestRender(false);
         }
       } else if (e.touches.length === 1 && scale > 1.05 && !isPinching) {
         if (e.cancelable) e.preventDefault();
         translateX = e.touches[0].clientX - startX;
         translateY = e.touches[0].clientY - startY;
         limitBounds();
-        requestAnimationFrame(() => updateTransform(false));
+        requestRender(false);
       }
     }, { passive: false });
 
@@ -224,24 +297,18 @@ document.addEventListener("DOMContentLoaded", function() {
         isPinching = false;
       }
 
-      // Если был простой одиночный тап в несжатом состоянии — открываем галерею
-      if (!touchMoved && scale <= 1.05 && e.changedTouches.length === 1 && fileInput) {
-        fileInput.click();
-        return;
-      }
-
       if (scale < 1) {
         scale = 1;
         translateX = 0;
         translateY = 0;
-        updateTransform(true);
+        requestRender(true);
       } else if (scale > 4) {
         scale = 4;
         limitBounds();
-        updateTransform(true);
+        requestRender(true);
       } else {
         limitBounds();
-        updateTransform(true);
+        requestRender(true);
       }
     });
   }
@@ -250,8 +317,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ХРАНИЛИЩА ===
 
-function loadStoredData() {
-  const storedImg = localStorage.getItem(STORAGE_KEY_IMG);
+async function loadStoredData() {
+  const storedImg = await loadImageFromDB();
   if (storedImg) {
     const img = document.getElementById("zoomImage");
     if (img) img.src = storedImg;
@@ -303,8 +370,8 @@ function saveReqData() {
   applyDataToUI(data);
 }
 
-function clearAllData() {
-  localStorage.removeItem(STORAGE_KEY_IMG);
+async function clearAllData() {
+  await removeImageFromDB();
   localStorage.removeItem(STORAGE_KEY_DATA);
 
   const img = document.getElementById("zoomImage");
